@@ -15,7 +15,7 @@ This project is a stub, but we hope that it will spur development of machine lea
 7) sklearn
 
 ### Data Scraping
-IR and MS spectra were downloaded from NIST website. https://webbook.nist.gov/chemistry/
+IR and MS spectra were downloaded from NIST website. https://webbook.nist.gov/chemistry/. \\
 Scraping can be done through replacing the correct CAS number in the placeholder. https://webbook.nist.gov/cgi/cbook.cgi?ID="insert_cas"&Units=SI
 
 ### Usage
