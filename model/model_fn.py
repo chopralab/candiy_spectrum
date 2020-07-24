@@ -76,7 +76,7 @@ def model_fn(is_training, inputs, reuse = False, **params):
     
         
     #Group all metrics update ops 
-    metrics_update_op = tf.group(*[val[1] for _, metric in metrics.items()])
+    metrics_update_op = tf.group(*[metric[1] for _, metric in metrics.items()])
         
     #Collect all metrics variables to initialize before every epoch
     metrics_variables = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope="metrics")
@@ -97,6 +97,5 @@ def model_fn(is_training, inputs, reuse = False, **params):
     
     if is_training:
         model_spec['train_op'] = train_op
-        model_spec['target_update_op'] = target_update_op
     
     return model_spec

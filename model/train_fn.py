@@ -1,10 +1,13 @@
+import os
 import logging
 from tqdm import trange
-
 import tensorflow as tf
+
+from evaluate_fn import evaluate_sess
 
 def train_sess(sess, model_spec, num_steps, writer, params):
     '''Train the model on the data for one epoch
+
     Args:
         sess: (tf.Session) indicates current session
         model_spec: (dict) contains all graph operations for training the model
@@ -17,12 +20,15 @@ def train_sess(sess, model_spec, num_steps, writer, params):
     
     '''
     
+    #Collect all update ops and metrics
     metrics_update_op = model_spec['metrics_update_op']
     train_op = model_spec['train_op']
     summary_op = model_spec['summary_op']
     loss = model_spec['loss']
+    metrics = model_spec['metrics']
     global_step = tf.train.get_global_step()
     
+    #Initialize the dataset iterator and metrics local variables
     sess.run(model_spec['initializer'])
     sess.run(model_spec['metric_initializer_op'])
     
@@ -35,15 +41,19 @@ def train_sess(sess, model_spec, num_steps, writer, params):
             _,_,loss_val=sess.run([train_op, metrics_update_op, loss])
         progress_bar.set_postfix(loss=round(loss_val,2))
             
-    
-    logging.info("- Train metrics: {}".format(loss_val))
+    #Compute metrics over entire training data
+    train_metrics_values = sess.run({key : val[0] for key, val in metrics.items()})
+    train_metrics_string = ''.join(['{} : {0:.3f}'.format(key, val) for key, val in train_metrics_values.items()])
+    logging.info("- Train metrics: "+ train_metrics_string)
 
 
 
-def train_and_save(model_spec, model_dir, params, restore_weights = None):
-    '''Train the model and save the weights
+def train_and_save(train_model_spec, eval_model_spec, model_dir, params, restore_weights = None):
+    '''Train the model and save the weights of last 5 epochs and the best epoch
+
     Args:
-        model_spec: (dict) contains all graph operations for training the model
+        train_model_spec: (dict) contains all graph operations for training the model
+        eval_model_spec: (dict) contains all graph operations for evaluating the model
         model_dir: (string) directory path to store weights and summaries
         params: (dict) hyperparameters of the model
         restore_weights: (string) directory path to restore weights from
@@ -51,26 +61,40 @@ def train_and_save(model_spec, model_dir, params, restore_weights = None):
     Returns:
         None
     '''
-
+    #Initiliaze the saver
     last_saver = tf.train.Saver()
+    best_saver = tf.train.Saver(max_to_keep=1)
     
     with tf.Session() as sess:
         begin_epoch = 0
-        sess.run(model_spec['variables_init_op'])
+        sess.run(train_model_spec['variables_init_op'])
         if restore_weights is not None:
+            #Restore weights from model_dir/restore_weights
             logging.info('Restoring weights from {}'.format(restore_weights))
-            latest_ckpt = tf.train.latest_checkpoint(os.path.join(restore_weights, 'weights'))
+            latest_ckpt = tf.train.latest_checkpoint(os.path.join(model_dir, restore_weights))
             begin_epoch = int(latest_ckpt.split('-')[-1])
             last_saver.restore(sess, latest_ckpt)
             
-
-        writer = tf.summary.FileWriter(os.path.join(model_dir, 'summary'), sess.graph)
+        #Create summary writer for training and evaluation
+        train_writer = tf.summary.FileWriter(os.path.join(model_dir, 'train_summary'), sess.graph)
+        eval_writer = tf.summary.FileWriter(os.path.join(model_dir, 'eval_summary'), sess.graph)
         
-        
+        best_eval_acc = 0
         for epoch in range(begin_epoch, begin_epoch + params['num_epochs']):
             logging.info('Epoch {}/{}'.format(epoch+1, begin_epoch + params['num_epochs']))
             num_steps = (params['train_size'] + params['batch_size'] - 1)//params['batch_size']
-            train_sess(sess, model_spec, num_steps, writer, params)
+            train_sess(sess, train_model_spec, num_steps, train_writer, params)
             
-            save_path = os.path.join(model_dir, 'weights', 'epoch')
-            last_saver.save(sess, save_path, global_step = epoch+1)
+            num_steps = (params['eval_size'] + params['batch_size'] - 1)//params['batch_size']
+            eval_metrics = evaluate_sess(sess, eval_model_spec, num_steps, eval_writer, params)
+            
+            last_save_path = os.path.join(model_dir, 'last_weights', 'epoch')
+            last_saver.save(sess, last_save_path, global_step = epoch+1)
+            
+            #Update the weights with current best model
+            if eval_metrics['accuracy'] > best_eval_acc:
+                best_eval_acc = eval_metrics['accuracy']
+                
+                best_save_path = os.path.join(model_dir, 'best_weights', 'epoch')
+                best_saver.save(sess, best_save_path, global_step = epoch+1)
+                logging.info('- Found new best accuracy. Saving in {}'.format(best_save_path))
