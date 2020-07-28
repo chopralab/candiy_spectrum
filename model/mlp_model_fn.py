@@ -1,7 +1,8 @@
 import tensorflow as tf 
 
-def build_model(is_training, inputs, **params):
+def build_mlp_model(is_training, inputs, params):
     '''Build forward model and compute logits
+
     Args:
         is_training: (bool) indicates training or evaluation
         inputs: (dict) contains tensors of inputs and labels fed to the graph
@@ -17,11 +18,12 @@ def build_model(is_training, inputs, **params):
     fc_hidden_units = params['fc_hidden_units']
     activation = params['activation']
     dropout_rate = params['dropout_rate']
+    batch_norm_layer = inputs 
     
     #Construct hidden layers of the forward model
     for layer in range(num_fc_layers):
         with tf.variable_scope('fc_{}'.format(layer+1)):
-            hidden_layer = tf.layers.dense(inputs, fc_hidden_units[layer], activation)
+            hidden_layer = tf.layers.dense(batch_norm_layer, fc_hidden_units[layer], activation)
             dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_rate,training = is_training)
             batch_norm_layer = tf.layers.batch_normalization(dropout_layer, training = is_training)
         
@@ -32,9 +34,10 @@ def build_model(is_training, inputs, **params):
     return output
 
 
-def model_fn(is_training, inputs, reuse = False, **params):
+def mlp_model_fn(is_training, inputs, reuse, params):
 
     '''Define graph operations for training and evaluating
+    
     Args:
         is_training: (bool) indicates training or evaluation
         inputs: (dict) contains tensors of inputs and labels fed to the graph
@@ -50,7 +53,7 @@ def model_fn(is_training, inputs, reuse = False, **params):
 
     #Compute logits and make predictions 
     with tf.variable_scope('model', reuse = reuse):
-        logits = build_model(is_training, spectra_data, **params)
+        logits = build_mlp_model(is_training, spectra_data, **params)
         predictions = tf.cast(tf.greater_equal(tf.sigmoid(logits), params['threshold']), tf.float32)
         
     #Binary cross entropy loss computed across every dimension for multi label classification
