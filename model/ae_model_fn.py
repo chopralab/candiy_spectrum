@@ -39,14 +39,14 @@ def build_ae_model(is_training, inputs, params):
     emb_layer = batch_norm_layer
 
     #Construct hidden layers of the decoder
-    for layer in range(num_ae_layers-1, 0, -1):
+    for layer in range(num_ae_layers-2, -1, -1):
         with tf.variable_scope('dec_{}'.format(layer+1)):
             hidden_layer = tf.layers.dense(batch_norm_layer, ae_hidden_units[layer], activation)
             dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_rate,training = is_training)
             batch_norm_layer = tf.layers.batch_normalization(dropout_layer, training = is_training)
         
     #Compute reconstructed spectra (use sigmoid as activation to get [0,1] range like input)
-    with tf.variable_scope('output'):
+    with tf.variable_scope('dec_{}'.format(layer+1)):
         output = tf.layers.dense(batch_norm_layer, inputs.shape[-1], 'sigmoid')
     
     return emb_layer, output
