@@ -29,7 +29,7 @@ def train_sess(sess, model_spec, num_steps, writer, params):
     global_step = tf.train.get_global_step()
     
     #Initialize the dataset iterator and metrics local variables
-    sess.run(model_spec['initializer'])
+    sess.run(model_spec['iterator_initializer'])
     sess.run(model_spec['metric_initializer_op'])
     
     progress_bar = trange(num_steps, position = 0)

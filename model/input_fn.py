@@ -1,7 +1,7 @@
 import tensorflow as tf 
 
 
-def input_fun(is_training, data, params):
+def input_fn(is_training, data, params):
     ''' Input function for spectra dataset
 
     Args:
@@ -31,7 +31,7 @@ def input_fun(is_training, data, params):
     
     iterator_initializer_op = iterator.initializer
     
-    inputs = {'spectra_data' : spectra_data, 'target' : target, 'initializer': iterator_initializer_op}
+    inputs = {'spectra_data' : spectra_data, 'target' : target, 'iterator_initializer': iterator_initializer_op}
         
     return inputs
         
