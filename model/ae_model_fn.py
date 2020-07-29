@@ -52,14 +52,13 @@ def build_ae_model(is_training, inputs, params):
     return emb_layer, output
 
 
-def ae_model_fn(is_training, inputs, reuse, params):
+def ae_model_fn(is_training, inputs, params):
 
     '''Define graph operations for training and evaluating
     
     Args:
         is_training: (bool) indicates training or evaluation
         inputs: (dict) contains tensors of inputs and labels fed to the graph
-        reuse: (bool) To or not to reuse the variables with same name
         params: (dict) hyperparameters of the model
 
     Returns:
@@ -71,7 +70,7 @@ def ae_model_fn(is_training, inputs, reuse, params):
     spectra_data = inputs['spectra_data']
 
     #Compute embeddings and reconstructed data
-    with tf.variable_scope('model', reuse = reuse):
+    with tf.variable_scope('model', reuse = not is_training):
         embeddings, spectra_recon = build_ae_model(is_training, spectra_data, **params)
         
     #Mean squared loss between input and reconstructed spectra

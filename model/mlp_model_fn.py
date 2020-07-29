@@ -34,7 +34,7 @@ def build_mlp_model(is_training, inputs, params):
     return output
 
 
-def mlp_model_fn(is_training, inputs, reuse, params):
+def mlp_model_fn(is_training, inputs, params):
 
     '''Define graph operations for training and evaluating
     
@@ -52,7 +52,7 @@ def mlp_model_fn(is_training, inputs, reuse, params):
     spectra_data = inputs['spectra_data']
 
     #Compute logits and make predictions 
-    with tf.variable_scope('model', reuse = reuse):
+    with tf.variable_scope('model', reuse = not is_training):
         logits = build_mlp_model(is_training, spectra_data, **params)
         predictions = tf.cast(tf.greater_equal(tf.sigmoid(logits), params['threshold']), tf.float32)
         
