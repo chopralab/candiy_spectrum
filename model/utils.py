@@ -1,6 +1,8 @@
 import os
 import logging
 
+from sklearn.model_selection import KFold
+
 def set_logger(model_dir):
     '''Set logger to write info to terminal and save in a file.
 
@@ -29,6 +31,19 @@ def set_logger(model_dir):
         logger.addHandler(sh)
     
     return logger
+
+def train_test_generator(X, y, n_splits):
+    kfold = KFold(n_splits=5,shuffle=True,random_state=4)
+
+    for train_index, val_index in kfold.split(X, y):
+        X_train, X_val = X[train_index], X[val_index]
+        y_train, y_val = y[train_index], y[val_index]
+
+        yield (X_train, y_train), (X_val, y_val)
+
+
+
+    
     
     
     
