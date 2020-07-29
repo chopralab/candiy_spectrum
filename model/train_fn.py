@@ -70,8 +70,9 @@ def train_and_save(train_model_spec, eval_model_spec, model_dir, params, restore
         sess.run(train_model_spec['variables_init_op'])
         if restore_weights is not None:
             #Restore weights from model_dir/restore_weights
-            logging.info('Restoring weights from {}'.format(restore_weights))
-            latest_ckpt = tf.train.latest_checkpoint(os.path.join(model_dir, restore_weights))
+            restore_dir = os.path.join(model_dir, restore_weights)
+            logging.info('Restoring weights from {}'.format(restore_dir))
+            latest_ckpt = tf.train.latest_checkpoint(restore_dir)
             begin_epoch = int(latest_ckpt.split('-')[-1])
             last_saver.restore(sess, latest_ckpt)
             

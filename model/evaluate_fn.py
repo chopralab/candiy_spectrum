@@ -9,13 +9,13 @@ def evaluate_sess(sess, model_spec, num_steps, writer, params):
 
     Args:
         sess: (tf.Session) indicates current session
-        model_spec: (dict) contains all graph operations for training the model
+        model_spec: (dict) contains all graph operations for evaluating the model
         params: (dict) hyperparameters of the model
         num_steps: (int) Number of batches 
         writer: (tf.summary.FileWriter) writer for storing summaries, can be None
 
     Returns:
-        None
+        eval_metrics_values: (string) contains metrics of validation data
     
     '''
     
@@ -50,7 +50,7 @@ def evaluate(model_spec, model_dir, params, restore_weights = None):
 
     Args:
         model_spec: (dict) contains all graph operations for training the model
-        model_dir: (string) directory path to store weights and summaries
+        model_dir: (string) directory path to restore weights and write summaries
         params: (dict) hyperparameters of the model
         restore_weights: (string) directory path to restore weights from
 
@@ -62,8 +62,9 @@ def evaluate(model_spec, model_dir, params, restore_weights = None):
     
     with tf.Session() as sess:
         #Restore weights from model_dir/restore_weights
-        logging.info('Restoring weights from {}'.format(restore_weights))
-        latest_ckpt = tf.train.latest_checkpoint(os.path.join(model_dir, restore_weights))
+        restore_dir = os.path.join(model_dir, restore_weights)
+        logging.info('Restoring weights from {}'.format(restore_dir))
+        latest_ckpt = tf.train.latest_checkpoint(restore_dir)
         saver.restore(sess, latest_ckpt)
 
         num_steps = (params['eval_size'] + params['batch_size'] - 1)//params['batch_size']
