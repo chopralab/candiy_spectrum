@@ -1,40 +1,83 @@
 import os
-from bs4 import BeautifulSoup
-import requests,urllib
+from bs4 import BeautifulSoup as bs
+import requests, urllib
+import argparse
+import logging
 import pandas as pd 
 
-df=pd.read_csv("species.txt",sep='\t')
-df.dropna(subset=['N/A'],how='all',inplace=True)
-df.columns =['Name','Formula','CAS']
-df.CAS=df.CAS.str.replace('-','')
+from model.utils import set_logger
 
-# ls=[]
-# for root, dirs, files in os.walk('./IR/'):
-# 	for name in files:
-# 		ls.append(name[:-6])
 
-# df=df[~df.CAS.isin(ls)]
-# print df.shape
+def scrap_data(cas_ls, params, data_dir):
+	'''Collect data from NIST database and store them in jdx format.
 
-url = "https://webbook.nist.gov/cgi/cbook.cgi"
-# spectype = ['Mass','IR']
-# response = requests.get(url, params={'JCAMP': 'C'+df.CAS.iloc[0], 'Type': 'Mass', 'Index': 0})
+    Args:
+        cas_ls: (list) CAS ids to download data for
+		params: (dict) queries to be added to url
+		data_dir: (string) path to store the data
 
-# print shap
-name=df.iloc[df.index.get_loc(df[df['CAS']=='79072'].index[0])].name
-# print df.loc[29952:]['CAS']
-for i in df.loc[name:]['CAS']:
-	for j in range(5):
-		response = requests.get(url, params={'JCAMP': i, 'Type': 'IR', 'Index': j})
+    Returns:
+        None
+    '''
+	nist_url = "https://webbook.nist.gov/cgi/cbook.cgi"
+
+	#Create directory for the relevant spetra 
+	spectra_path = os.path.join(data_dir, params['Type'].lower(), '')
+	if not os.path.exists(spectra_path):
+		os.makedirs(spectra_path)
+
+	num_created = 0
+	for cas_id in cas_ls:
+		params['JCAMP'] = 'C' + cas_id
+		response = requests.get(nist_url, params=params)
+
 		if response.text == '##TITLE=Spectrum not found.\n##END=\n':
-			break
-		with open('./IR/'+str(i)+'d'+str(j)+'.jdx', 'w') as file:
-			file.write(response.content)
-		print(i,j)
+			continue
+		num_created+=1
+		logging.info('Creating {} spectra for id: {}. Total spectra created {}'.format(params['Type'].lower(), cas_id, num_created))
+		with open(spectra_path +cas_id +'.jdx', 'wb') as data:
+			data.write(response.content)
+			
+	
 
 
 
-# f=open("4447216.jdx")
-# val = f.readline()
-# if(val=="##TITLE=Spectrum not found.\n"):
-# 	os.remove("4447216.jdx")
+parser = argparse.ArgumentParser()
+parser.add_argument('--data_dir', default= './data',\
+     help = "Directory path to store scrapped data")
+parser.add_argument('--cas_smiles_list', default= 'species.txt',\
+    help = "File containing CAS number and smiles of molecules")
+parser.add_argument('--scrap_IR', default= True,\
+    help = "Whether to download IR or not")
+parser.add_argument('--scrap_MS', default= True,\
+    help = "Whether to download MS or not")
+
+args = parser.parse_args()
+
+#Create data directory to store logs and spectra
+data_dir = args.data_dir
+if not os.path.exists(data_dir):
+	os.makedirs(data_dir)
+
+set_logger(data_dir, 'scrap.log')
+
+#Obtain CAS ids used for downloading the content from NIST
+logging.info('Loading CAS file')
+cas_smiles_df = pd.read_csv(args.cas_smiles_list, sep='\t', names = ['name', 'smiles', 'cas'], header = 0)
+cas_smiles_df.dropna(subset=['cas'], inplace=True)
+cas_smiles_df.cas = cas_smiles_df.cas.str.replace('-', '')
+
+cas_ids = list(cas_smiles_df.cas)
+
+
+
+
+logging.info('Scrap Mass spectra')
+if args.scrap_MS:
+	params = params={'JCAMP': '',  'Index': 0, 'Type': 'Mass'}
+	scrap_data(cas_ids, params, data_dir)
+
+logging.info('Scrap IR spectra')
+if args.scrap_IR:
+	params={'JCAMP': '', 'Type': 'IR', 'Index': 0}	
+	scrap_data(cas_ids, params, data_dir)
