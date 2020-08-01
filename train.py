@@ -25,6 +25,7 @@ parser.add_argument('--restore_mlp_from', default= None,\
 
 args = parser.parse_args()
 
+#Model directory should contain params.json file listing all hyperparameters
 json_path = os.path.join(args.model_dir, 'params.json')
 assert os.path.isfile(json_path),"No params.json found at {} path".format(args.model_dir)
 
@@ -37,7 +38,9 @@ logging.info('Load the dataset from data_dir')
 X, y = load_dataset(args.data_dir, include_mass= True)
 
 
+#Train and test generator for every fold
 data_generator = train_test_generator(X, y, params['n_splits'])
+
 
 for cv, (train_data, test_data) in enumerate(data_generator):
     logging.info('Starting {} fold'.format(cv))
@@ -58,8 +61,9 @@ for cv, (train_data, test_data) in enumerate(data_generator):
 
         logging.info('Start training {} epochs'.format(params['num_epochs']))
         model_dir = os.path.join(args.model_dir, str(cv), 'ae')
-        train_and_save(train_model, eval_model, model_dir, params, restore_weights = None)
+        train_and_save(train_model, eval_model, model_dir, params, restore_weights = args.restore_ae_from)
 
+        #Update spectra data with embeddings computed from the model
         logging.info('Compute embeddings of the spectra data')
         train_data, test_data = embeddings(train_model, eval_model, model_dir, params, 'best_weights')
 
@@ -76,5 +80,5 @@ for cv, (train_data, test_data) in enumerate(data_generator):
 
     logging.info('Start training {} epochs'.format(params['num_epochs']))
     model_dir = os.path.join(args.model_dir, 'cv_' + str(cv), 'mlp')
-    train_and_save(train_model, eval_model, model_dir, params, restore_weights = None)
+    train_and_save(train_model, eval_model, model_dir, params, restore_weights = args.restore_mlp_from)
 
