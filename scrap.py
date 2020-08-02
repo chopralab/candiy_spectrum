@@ -54,6 +54,9 @@ parser.add_argument('--scrap_MS', default= True,\
 
 args = parser.parse_args()
 
+#Check if file containing CAS and smiles exist
+assert os.path.isfile(args.cas_smiles_list),"No file named {} exists".format(args.cas_smiles_list)
+
 #Create data directory to store logs and spectra
 data_dir = args.data_dir
 if not os.path.exists(data_dir):
