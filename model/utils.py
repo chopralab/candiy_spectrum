@@ -3,7 +3,7 @@ import logging
 
 from sklearn.model_selection import KFold
 
-def set_logger(model_dir):
+def set_logger(model_dir, log_name):
     '''Set logger to write info to terminal and save in a file.
 
     Args:
@@ -19,7 +19,7 @@ def set_logger(model_dir):
     if not logger.handlers:
 
         #File handler with debug level stored in model_dir/generation.log
-        fh = logging.FileHandler(os.path.join(model_dir, 'generation.log'))
+        fh = logging.FileHandler(os.path.join(model_dir, log_name))
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(logging.Formatter('%(asctime)s: %(levelname)s: %(message)s'))
         logger.addHandler(fh)
@@ -41,14 +41,5 @@ def train_test_generator(X, y, n_splits):
 
         yield (X_train, y_train), (X_val, y_val)
 
-
-
-    
-    
-    
-    
-if __name__ == '__main__':
-    model_dir = './mcts_logs/'
-    set_logger(model_dir)
 
     
