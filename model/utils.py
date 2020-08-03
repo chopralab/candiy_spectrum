@@ -33,6 +33,19 @@ def set_logger(model_dir, log_name):
     return logger
 
 def train_test_generator(X, y, n_splits):
+    '''
+    Create a generator to return next train and test data split when called
+
+    Args:
+        X: (np.array) of dimension [num_samples x features]
+        y: (np.array) of dimension [num_samples x target groups]
+        n_splits: (int) Number of cross validation folds
+    
+    Returns:
+        (X_train, y_train): (tuple) of np.arrays containing single fold of train data
+        (X_test, y_test): (tuple) of np.arrays containing single fold of test data
+    '''
+
     kfold = KFold(n_splits=5,shuffle=True,random_state=4)
 
     for train_index, val_index in kfold.split(X, y):
