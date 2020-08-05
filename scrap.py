@@ -118,4 +118,4 @@ if args.scrap_IR:
 logging.info('Scrap InChi keys')
 if args.scrap_InChi:
 	params={}
-	scrap_inchi(cas_ids[:10], params, data_dir)
+	scrap_inchi(cas_ids, params, data_dir)
