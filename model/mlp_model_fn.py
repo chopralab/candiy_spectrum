@@ -19,6 +19,7 @@ def build_mlp_model(is_training, inputs, params):
     activation = params['activation']
     dropout_probs = params['dropout_probs']
     batch_norm_layer = inputs 
+    output_shape = params['output_shape']
     
     #Construct hidden layers of the forward model
     for layer in range(num_fc_layers):
@@ -29,7 +30,7 @@ def build_mlp_model(is_training, inputs, params):
         
     #Compute output of the model   
     with tf.variable_scope('output'):
-        output = tf.layers.dense(batch_norm_layer, 1, None)
+        output = tf.layers.dense(batch_norm_layer, output_shape, None)
     
     return output
 
@@ -50,15 +51,16 @@ def mlp_model_fn(is_training, inputs, params):
     '''
     target = inputs['target']
     spectra_data = inputs['spectra_data']
+    params['output_shape'] = target.shape[1]
 
     #Compute logits and make predictions 
     with tf.variable_scope('model', reuse = not is_training):
-        logits = build_mlp_model(is_training, spectra_data, **params)
-        predictions = tf.cast(tf.greater_equal(tf.sigmoid(logits), params['threshold']), tf.float32)
+        logits = build_mlp_model(is_training, spectra_data, params)
+        predictions = tf.cast(tf.greater_equal(tf.sigmoid(logits), params['threshold']), tf.float64)
         
     #Binary cross entropy loss computed across every dimension for multi label classification
-    loss = tf.reduce_mean(tf.losses.binary_crossentropy(target, logits, from_logits = True))
-    accuracy = tf.reduce_mean(tf.cast(tf.equal(target, predictions), tf.float32))
+    loss = tf.reduce_mean(tf.losses.sigmoid_cross_entropy(target, logits))
+    accuracy = tf.reduce_mean(tf.cast(tf.equal(target, predictions), tf.float64))
 
 
 
