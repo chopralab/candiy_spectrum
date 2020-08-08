@@ -4,6 +4,7 @@ import argparse
 import json
 
 import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
 
 from model.utils import set_logger, train_test_generator
 from model.input_fn import input_fn
@@ -34,8 +35,8 @@ with open(json_path) as json_data:
 
 set_logger(args.model_dir, 'train.log')
 
-logging.info('Load the dataset from data_dir')
-X, y = load_dataset(args.data_dir, include_mass= True, params)
+logging.info('Load the dataset from {}'.format(args.data_dir))
+X, y = load_dataset(args.data_dir, True, **params['preprocess'])
 
 
 #Train and test generator for every fold
@@ -43,42 +44,52 @@ data_generator = train_test_generator(X, y, params['n_splits'])
 
 
 for cv, (train_data, test_data) in enumerate(data_generator):
-    logging.info('Starting fold {}'.format(cv))
-    
+    logging.info('Starting fold {}'.format(cv+1))
+    train_size = train_data[0].shape[0]
+    eval_size = test_data[0].shape[0]
     
     if params['train_ae']:
         tf.reset_default_graph()
         logging.info('Training autoencoder to compute embeddings')
 
+        ae_params = params['ae']
+        ae_params['train_size'] = train_size
+        ae_params['eval_size'] = eval_size
+
         logging.info('Creating the inputs for the model')
-        train_inputs = input_fn(True, train_data, params)
-        eval_inputs = input_fn(False, test_data, params)
+        train_inputs = input_fn(True, train_data, ae_params)
+        eval_inputs = input_fn(False, test_data, ae_params)
 
         logging.info('Building the model')
-        train_model = ae_model_fn(True, train_inputs, params)
-        eval_model = ae_model_fn(False, eval_inputs, params)
+        train_model = ae_model_fn(True, train_inputs, ae_params)
+        eval_model = ae_model_fn(False, eval_inputs, ae_params)
 
 
-        logging.info('Start training {} epochs'.format(params['num_epochs']))
-        model_dir = os.path.join(args.model_dir, str(cv), 'ae')
-        train_and_save(train_model, eval_model, model_dir, params, restore_weights = args.restore_ae_from)
+        logging.info('Start training {} epochs'.format(params['ae']['num_epochs']))
+        model_dir = os.path.join(args.model_dir, 'cv_' + str(cv+1), 'ae')
+        train_and_save(train_model, eval_model, model_dir, ae_params, restore_weights = args.restore_ae_from)
 
         #Update spectra data with embeddings computed from the model
         logging.info('Compute embeddings of the spectra data')
-        train_data, test_data = embeddings(train_model, eval_model, model_dir, params, 'best_weights')
+        train_data, test_data = embeddings(train_model, eval_model, model_dir, ae_params, 'best_weights')
 
     tf.reset_default_graph()
     logging.info('Training MLP model')
 
+    mlp_params = params['mlp']
+    mlp_params['train_size'] = train_size
+    mlp_params['eval_size'] = eval_size
+
+
     logging.info('Creating the inputs for the model')
-    train_inputs = input_fn(True, train_data, params)
-    eval_inputs = input_fn(False, test_data, params)
+    train_inputs = input_fn(True, train_data, mlp_params)
+    eval_inputs = input_fn(False, test_data, mlp_params)
 
     logging.info('Building the model')
-    train_model = mlp_model_fn(True, train_inputs, params)
-    eval_model = mlp_model_fn(False, eval_inputs, params)
+    train_model = mlp_model_fn(True, train_inputs, mlp_params)
+    eval_model = mlp_model_fn(False, eval_inputs, mlp_params)
 
-    logging.info('Start training {} epochs'.format(params['num_epochs']))
-    model_dir = os.path.join(args.model_dir, 'cv_' + str(cv), 'mlp')
-    train_and_save(train_model, eval_model, model_dir, params, restore_weights = args.restore_mlp_from)
+    logging.info('Start training {} epochs'.format(params['mlp']['num_epochs']))
+    model_dir = os.path.join(args.model_dir, 'cv_' + str(cv+1), 'mlp')
+    train_and_save(train_model, eval_model, model_dir, mlp_params, restore_weights = args.restore_mlp_from)
 
