@@ -15,12 +15,12 @@ def build_ae_model(is_training, inputs, params):
     '''
     
     #Read all hyperparameters
-    num_ae_layers = params['num_ae_layers']
-    ae_hidden_units = params['ae_hidden_units']
+    num_ae_layers = params['num_fc_layers']
+    ae_hidden_units = params['fc_hidden_units']
     activation = params['activation']
-    dropout_rate = params['dropout_rate']
+    dropout_probs = params['dropout_probs']
     is_denoising = params.get('is_denoising', False)
-    denoise_prob = params.get('denoise_prob', 0.05)
+    denoise_prob = params.get('denoise_inputs', 0.05)
     batch_norm_layer = inputs 
 
     # Randomly flip inputs to 0 with the probability of denoise_prob
@@ -33,7 +33,7 @@ def build_ae_model(is_training, inputs, params):
     for layer in range(num_ae_layers):
         with tf.variable_scope('enc_{}'.format(layer+1)):
             hidden_layer = tf.layers.dense(batch_norm_layer, ae_hidden_units[layer], activation)
-            dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_rate,training = is_training)
+            dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_probs[layer],training = is_training)
             batch_norm_layer = tf.layers.batch_normalization(dropout_layer, training = is_training)
 
     emb_layer = batch_norm_layer
@@ -42,7 +42,7 @@ def build_ae_model(is_training, inputs, params):
     for layer in range(num_ae_layers-2, -1, -1):
         with tf.variable_scope('dec_{}'.format(layer+1)):
             hidden_layer = tf.layers.dense(batch_norm_layer, ae_hidden_units[layer], activation)
-            dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_rate,training = is_training)
+            dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_probs[layer],training = is_training)
             batch_norm_layer = tf.layers.batch_normalization(dropout_layer, training = is_training)
         
     #Compute reconstructed spectra (use sigmoid as activation to get [0,1] range like input)
@@ -71,10 +71,10 @@ def ae_model_fn(is_training, inputs, params):
 
     #Compute embeddings and reconstructed data
     with tf.variable_scope('model', reuse = not is_training):
-        embeddings, spectra_recon = build_ae_model(is_training, spectra_data, **params)
+        embeddings, spectra_recon = build_ae_model(is_training, spectra_data, params)
         
     #Mean squared loss between input and reconstructed spectra
-    loss = tf.reduce_mean(tf.losses.MSE(spectra_data, spectra_recon))
+    loss = tf.reduce_mean(tf.losses.mean_squared_error(spectra_data, spectra_recon))
 
 
 
