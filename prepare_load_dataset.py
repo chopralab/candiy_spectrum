@@ -65,9 +65,9 @@ def JCAMP_reader(filename):
 
 
 def check_spectra_prop(mol_dict):
-    cond1 = mol_dict.get('state', 'N\A').lower() == 'gas'
-    cond2 = mol_dict.get('xunits', 'N\A').lower() != 'micrometers'
-    cond3 = mol_dict.get('yunits', 'N\A').lower() == 'absorbance'
+    cond1 = mol_dict.get('state', r'N\A').lower() == 'gas'
+    cond2 = mol_dict.get('xunits', r'N\A').lower() != 'micrometers'
+    cond3 = mol_dict.get('yunits', r'N\A').lower() == 'absorbance'
     
     return all((cond1, cond2, cond3))
 
@@ -122,6 +122,49 @@ def save_target_to_csv(cas_inchi_df, save_path):
 
     target_df.dropna(inplace = True)
     target_df.to_csv(save_path)
+
+def preprocess_spectra_df(spectra_df, is_mass = False, **kwargs):
+    if is_mass:
+        spectra_df.fillna(0, inplace = True)
+        spectra_df = spectra_df.loc[spectra_df.sum(axis=1)!=0,:]
+        
+    else:
+        spectra_df.sort_index(axis = 0, inplace = True)
+        spectra_df.reset_index(inplace = True)
+        spectra_df.iloc[:, 1:] = spectra_df.iloc[:,1:].interpolate(**kwargs,\
+                                         limit_direction='both', axis = 0)
+        spectra_df.set_index('index', inplace = True)
+
+
+    return spectra_df.div(spectra_df.max(axis=0), axis=1)
+        
+
+
+def load_dataset(data_dir, include_mass = True, **params):
+    ir_path = os.path.join(data_dir, 'ir.csv')
+    ir_df = pd.read_csv(ir_path, index_col = 0)
+    ir_df = preprocess_spectra_df(ir_df, is_mass = False, **params).T
+    
+    spectra_df = ir_df
+    
+    if include_mass:
+        mass_path = os.path.join(data_dir, 'mass.csv')
+        mass_df = pd.read_csv(mass_path, index_col = 0)
+        mass_df = preprocess_spectra_df(mass_df, is_mass = True).T
+        
+#         mass_df = mass_df.reindex(ir_df.index)
+#         spectra_df = pd.concat([spectra_df, mass_df], axis = 1)
+#         spectra_df.dropna(inplace = True)
+        spectra_df = pd.merge(spectra_df, mass_df, left_index = True, right_index = True, how = 'inner')
+     
+    spectra_df.index = spectra_df.index.astype('int')
+    target_path = os.path.join(data_dir, 'target.csv')
+    target_df = pd.read_csv(target_path, index_col = 0)
+
+
+    target_df = target_df.reindex(spectra_df.index)
+#     target_df.dropna(inplace = True)
+    return spectra_df.values, target_df.values
     
     
 if __name__ == '__main__':
