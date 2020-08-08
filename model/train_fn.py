@@ -3,7 +3,7 @@ import logging
 from tqdm import trange
 import tensorflow as tf
 
-from evaluate_fn import evaluate_sess
+from .evaluate_fn import evaluate_sess
 
 def train_sess(sess, model_spec, num_steps, writer, params):
     '''Train the model on the data for one epoch
@@ -43,7 +43,7 @@ def train_sess(sess, model_spec, num_steps, writer, params):
             
     #Compute metrics over entire training data
     train_metrics_values = sess.run({key : val[0] for key, val in metrics.items()})
-    train_metrics_string = ''.join(['{} : {0:.3f}'.format(key, val) for key, val in train_metrics_values.items()])
+    train_metrics_string = ' '.join(['{} : {:.4f}'.format(key, val) for key, val in train_metrics_values.items()])
     logging.info("- Train metrics: "+ train_metrics_string)
 
 
@@ -79,8 +79,18 @@ def train_and_save(train_model_spec, eval_model_spec, model_dir, params, restore
         #Create summary writer for training and evaluation
         train_writer = tf.summary.FileWriter(os.path.join(model_dir, 'train_summary'), sess.graph)
         eval_writer = tf.summary.FileWriter(os.path.join(model_dir, 'eval_summary'), sess.graph)
+
+        if params['best_model_metric'] == 'acc':
+            eval_name = 'accuracy'
+            eval_comp = '>'
+            best_eval_val = 0
         
-        best_eval_acc = 0
+        else :
+            eval_name = 'loss'
+            eval_comp = '<'
+            best_eval_val = 1e4
+
+        
         for epoch in range(begin_epoch, begin_epoch + params['num_epochs']):
             logging.info('Epoch {}/{}'.format(epoch+1, begin_epoch + params['num_epochs']))
             num_steps = (params['train_size'] + params['batch_size'] - 1)//params['batch_size']
@@ -93,9 +103,9 @@ def train_and_save(train_model_spec, eval_model_spec, model_dir, params, restore
             last_saver.save(sess, last_save_path, global_step = epoch+1)
             
             #Update the weights with current best model
-            if eval_metrics['accuracy'] > best_eval_acc:
-                best_eval_acc = eval_metrics['accuracy']
+            if eval(str(eval_metrics[eval_name]) +  eval_comp + str(best_eval_val)):
+                best_eval_val = eval_metrics[eval_name]
                 
                 best_save_path = os.path.join(model_dir, 'best_weights', 'epoch')
                 best_saver.save(sess, best_save_path, global_step = epoch+1)
-                logging.info('- Found new best accuracy. Saving in {}'.format(best_save_path))
+                logging.info('- Found new best {}. Saving in {}'.format(eval_name, best_save_path))

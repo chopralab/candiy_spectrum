@@ -25,7 +25,7 @@ def evaluate_sess(sess, model_spec, num_steps, writer, params):
     global_step = tf.train.get_global_step()
     
     #Initiliaze the dataset iterator and metrics local variables
-    sess.run(model_spec['initializer'])
+    sess.run(model_spec['iterator_initializer'])
     sess.run(model_spec['metric_initializer_op'])
     
     progress_bar = trange(num_steps, position = 0)
@@ -34,7 +34,7 @@ def evaluate_sess(sess, model_spec, num_steps, writer, params):
     
     #Compute and log evaluation metrics
     eval_metrics_values = sess.run({key : val[0] for key, val in metrics.items()})
-    eval_metrics_string = ''.join(['{} : {:.3f}'.format(key, val) for key, val in eval_metrics_values.items()])
+    eval_metrics_string = ' '.join(['{} : {:.3f}'.format(key, val) for key, val in eval_metrics_values.items()])
     logging.info("- Eval metrics: "+ eval_metrics_string)
     
     #Add evaluation summaries to the writer
