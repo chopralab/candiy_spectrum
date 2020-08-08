@@ -29,7 +29,7 @@ def embedding_sess(sess, model_spec, size, params):
     embed_arr = np.zeros((size, embed_dim))
 
     #Initiliaze the dataset iterator
-    sess.run(model_spec['iterator initializer'])
+    sess.run(model_spec['iterator_initializer'])
     
 
     batch_size = params['batch_size']
@@ -66,7 +66,7 @@ def embeddings(train_model_spec, eval_model_spec, model_dir, params, restore_wei
         #Restore weights from model_dir/restore_weights
         restore_dir = os.path.join(model_dir, restore_weights)
         logging.info('Restoring weights from {}'.format(restore_dir))
-        latest_ckpt = tf.train.latest_checkpoint(restore_weights)
+        latest_ckpt = tf.train.latest_checkpoint(restore_dir)
         saver.restore(sess, latest_ckpt)
 
         #Compute embeddings for train and test data
