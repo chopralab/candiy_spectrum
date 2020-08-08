@@ -5,12 +5,14 @@
     "dropout_probs": [0.45, 0.15],                     
     "batch_size": 64,                       
     "learning_rate" : 0.00015, 
-    "num_epochs": 100, 
-    "best_model_metric" : "acc",
+    "num_epochs": 5, 
+    "threshold" : 0.5,
+    "best_model_metric" : "loss",
     "save_frequency": 5},
 "preprocess":
     {"method" : "linear",
     "order" : 1
     },
-"n_splits" : 5
+"n_splits" : 5,
+"train_ae" : 0
 }
