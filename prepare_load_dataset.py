@@ -34,29 +34,8 @@ func_grp_smarts = {'alkane':'[CX4]','methyl':'[CH3]','alkene':'[CX3]=[CX3]','alk
                    'amides':'[NX3][CX3](=[OX1])[#6]','nitro':'[$([NX3](=O)=O),$([NX3+](=O)[O-])][!#8]'}
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--data_dir', default= './data',\
-     help = "Directory path containing scrapped data")
-parser.add_argument('--cas_list', default= 'species.txt',\
-    help = "File containing CAS number and smiles of molecules")
 
-args = parser.parse_args()
-
-
-data_dir = args.data_dir
-set_logger(data_dir, 'prepare_data.log')
-
-
-
-ir_bins = np.arange(min_ir - eps, max_ir + eps, step_ir)
-mass_bins = np.arange(min_mass - eps, max_mass + eps, step_mass)
-
-func_grp_structs = {func_name : Chem.MolFromSmarts(func_smarts)\
-                      for func_name, func_smarts in func_grp_smarts.items()}
                 
-
-
-
 def JCAMP_reader(filename):
     with open(filename, 'r', encoding = 'latin-1') as filehandle:
         data = jcamp_read(filehandle)
@@ -168,6 +147,25 @@ def load_dataset(data_dir, include_mass = True, **params):
     
     
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_dir', default= './data',\
+        help = "Directory path containing scrapped data")
+    parser.add_argument('--cas_list', default= 'species.txt',\
+        help = "File containing CAS number and smiles of molecules")
+
+    args = parser.parse_args()
+
+    data_dir = args.data_dir
+    set_logger(data_dir, 'prepare_data.log')
+
+
+
+    ir_bins = np.arange(min_ir - eps, max_ir + eps, step_ir)
+    mass_bins = np.arange(min_mass - eps, max_mass + eps, step_mass)
+
+    func_grp_structs = {func_name : Chem.MolFromSmarts(func_smarts)\
+                        for func_name, func_smarts in func_grp_smarts.items()}
     for root, dirs, files in os.walk(data_dir):
         if root == os.path.join(data_dir, 'ir'):
             ir_path = os.path.join(data_dir, 'ir.csv')
