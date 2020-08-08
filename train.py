@@ -35,7 +35,7 @@ with open(json_path) as json_data:
 set_logger(args.model_dir, 'train.log')
 
 logging.info('Load the dataset from data_dir')
-X, y = load_dataset(args.data_dir, include_mass= True)
+X, y = load_dataset(args.data_dir, include_mass= True, params)
 
 
 #Train and test generator for every fold
@@ -43,7 +43,7 @@ data_generator = train_test_generator(X, y, params['n_splits'])
 
 
 for cv, (train_data, test_data) in enumerate(data_generator):
-    logging.info('Starting {} fold'.format(cv))
+    logging.info('Starting fold {}'.format(cv))
     
     
     if params['train_ae']:
@@ -75,8 +75,8 @@ for cv, (train_data, test_data) in enumerate(data_generator):
     eval_inputs = input_fn(False, test_data, params)
 
     logging.info('Building the model')
-    train_model = ae_model_fn(True, train_inputs, params)
-    eval_model = ae_model_fn(False, eval_inputs, params)
+    train_model = mlp_model_fn(True, train_inputs, params)
+    eval_model = mlp_model_fn(False, eval_inputs, params)
 
     logging.info('Start training {} epochs'.format(params['num_epochs']))
     model_dir = os.path.join(args.model_dir, 'cv_' + str(cv), 'mlp')
