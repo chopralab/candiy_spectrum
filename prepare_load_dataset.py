@@ -26,7 +26,7 @@ step_mass = 1
 
 eps = 1e-4
 
-func_grp_smarts = {'alkane':'[CX4]','methyl':'[CH3]','alkene':'[CX3]=[CX3]','alkyne':'[CX2]#C',
+func_grp_smarts = {'alkane':'[CX4;H0,H1,H2,H4]','methyl':'[CH3]','alkene':'[CX3]=[CX3]','alkyne':'[CX2]#C',
                    'alcohols':'[#6][OX2H]','amines':'[NX3;H2,H1;!$(NC=O)]', 'nitriles':'[NX1]#[CX2]', 
                    'aromatics':'[$([cX3](:*):*),$([cX2+](:*):*)]','alkyl halides':'[#6][F,Cl,Br,I]', 
                    'esters':'[#6][CX3](=O)[OX2H0][#6]', 'ketones':'[#6][CX3](=O)[#6]','aldehydes':'[CX3H1](=O)[#6]', 
@@ -108,7 +108,6 @@ def preprocess_spectra_df(spectra_df, is_mass = False, **kwargs):
         spectra_df = spectra_df.loc[spectra_df.sum(axis=1)!=0,:]
         
     else:
-        spectra_df.sort_index(axis = 0, inplace = True)
         spectra_df.reset_index(inplace = True)
         spectra_df.iloc[:, 1:] = spectra_df.iloc[:,1:].interpolate(**kwargs,\
                                          limit_direction='both', axis = 0)
@@ -138,7 +137,7 @@ def load_dataset(data_dir, include_mass = True, **params):
      
     spectra_df.index = spectra_df.index.astype('int')
     target_path = os.path.join(data_dir, 'target.csv')
-    target_df = pd.read_csv(target_path, index_col = 0)
+    target_df = pd.read_csv(target_path, index_col = 0, dtype = np.float64)
 
 
     target_df = target_df.reindex(spectra_df.index)
