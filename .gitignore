@@ -1,0 +1,7 @@
+**/cv_*
+**/*.log
+**/.pyc
+*.ipynb*
+__pycache__/
+species.txt
+*data/
