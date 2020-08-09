@@ -18,19 +18,22 @@ def build_mlp_model(is_training, inputs, params):
     fc_hidden_units = params['fc_hidden_units']
     activation = params['activation']
     dropout_probs = params['dropout_probs']
-    batch_norm_layer = inputs 
+    dropout_layer = inputs 
     output_shape = params['output_shape']
     
     #Construct hidden layers of the forward model
     for layer in range(num_fc_layers):
         with tf.variable_scope('fc_{}'.format(layer+1)):
-            hidden_layer = tf.layers.dense(batch_norm_layer, fc_hidden_units[layer], activation)
-            dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_probs[layer],training = is_training)
-            batch_norm_layer = tf.layers.batch_normalization(dropout_layer, training = is_training)
+            hidden_layer = tf.layers.dense(dropout_layer, fc_hidden_units[layer])
+            batch_norm_layer = tf.layers.batch_normalization(hidden_layer, training = is_training)
+            activation_layer = eval(activation)(batch_norm_layer)
+            dropout_layer = tf.layers.dropout(activation_layer, rate = dropout_probs[layer],training = is_training)
+            
+            
         
     #Compute output of the model   
     with tf.variable_scope('output'):
-        output = tf.layers.dense(batch_norm_layer, output_shape, None)
+        output = tf.layers.dense(dropout_layer, output_shape, None)
     
     return output
 

@@ -21,33 +21,37 @@ def build_ae_model(is_training, inputs, params):
     dropout_probs = params['dropout_probs']
     is_denoising = params.get('is_denoising', False)
     denoise_prob = params.get('denoise_inputs', 0.05)
-    batch_norm_layer = inputs 
+    dropout_layer = inputs 
 
     # Randomly flip inputs to 0 with the probability of denoise_prob
     if is_denoising:
         input_shape = tf.shape(inputs)
-        batch_norm_layer *= tf.where(tf.random_uniform(input_shape) > denoise_prob, tf.ones(input_shape)\
+        dropout_layer *= tf.where(tf.random_uniform(input_shape) > denoise_prob, tf.ones(input_shape)\
                             , tf.zeros(input_shape))
 
     #Construct hidden layers of the encoder
     for layer in range(num_ae_layers):
         with tf.variable_scope('enc_{}'.format(layer+1)):
-            hidden_layer = tf.layers.dense(batch_norm_layer, ae_hidden_units[layer], activation)
-            dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_probs[layer],training = is_training)
-            batch_norm_layer = tf.layers.batch_normalization(dropout_layer, training = is_training)
+            hidden_layer = tf.layers.dense(dropout_layer, ae_hidden_units[layer])
+            batch_norm_layer = tf.layers.batch_normalization(hidden_layer, training = is_training)
+            activation_layer = eval(activation)(batch_norm_layer)
+            dropout_layer = tf.layers.dropout(activation_layer, rate = dropout_probs[layer],training = is_training)
+            
+            
 
-    emb_layer = batch_norm_layer
+    emb_layer = dropout_layer
 
     #Construct hidden layers of the decoder
     for layer in range(num_ae_layers-2, -1, -1):
         with tf.variable_scope('dec_{}'.format(layer+1)):
-            hidden_layer = tf.layers.dense(batch_norm_layer, ae_hidden_units[layer], activation)
-            dropout_layer = tf.layers.dropout(hidden_layer, rate = dropout_probs[layer],training = is_training)
-            batch_norm_layer = tf.layers.batch_normalization(dropout_layer, training = is_training)
-        
+            hidden_layer = tf.layers.dense(dropout_layer, ae_hidden_units[layer])
+            batch_norm_layer = tf.layers.batch_normalization(hidden_layer, training = is_training)
+            activation_layer = eval(activation)(batch_norm_layer)
+            dropout_layer = tf.layers.dropout(activation_layer, rate = dropout_probs[layer],training = is_training)
+    
     #Compute reconstructed spectra (use sigmoid as activation to get [0,1] range like input)
     with tf.variable_scope('dec_{}'.format(layer+1)):
-        output = tf.layers.dense(batch_norm_layer, inputs.shape[-1], 'sigmoid')
+        output = tf.layers.dense(dropout_layer, inputs.shape[-1], 'sigmoid')
     
     return emb_layer, output
 
