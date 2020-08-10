@@ -94,6 +94,7 @@ def add_spectra_to_df(spectra_df, file_path, bins, is_mass = False):
     mol_df.index = pd.cut(mol_df.index, bins = bins)
     mol_df = mol_df.groupby(level=0).agg('mean')
 
+    logging.info('Adding spectra with id {} to dataframe'.format(mol_id))
     if spectra_df is None:
         spectra_df = mol_df
     else:
@@ -120,6 +121,7 @@ def save_spectra_to_csv(root, files, save_path, bins, is_mass = False):
         file_path = os.path.join(root,file_name)
         spectra_df = add_spectra_to_df(spectra_df, file_path\
                                                 ,bins, is_mass)
+    logging.info('Creating dataset in {}'.format(save_path))
     spectra_df.to_csv(save_path)
 
 
@@ -220,6 +222,7 @@ def load_dataset(data_dir, include_mass = True, **params):
 
     #load and prepare IR data
     ir_path = os.path.join(data_dir, 'ir.csv')
+    logging.info('Loading IR data from {}'.format(ir_path))
     ir_df = pd.read_csv(ir_path, index_col = 0)
     ir_df = preprocess_spectra_df(ir_df, is_mass = False, **params).T
     
@@ -229,6 +232,7 @@ def load_dataset(data_dir, include_mass = True, **params):
 
         #Load and prepare mass data
         mass_path = os.path.join(data_dir, 'mass.csv')
+        logging.info('Loading mass data from {}'.format(mass_path))
         mass_df = pd.read_csv(mass_path, index_col = 0)
         mass_df = preprocess_spectra_df(mass_df, is_mass = True).T
         
@@ -242,6 +246,7 @@ def load_dataset(data_dir, include_mass = True, **params):
     #Prepare target data and rearrange to match the spectra
     spectra_df.index = spectra_df.index.astype('int')
     target_path = os.path.join(data_dir, 'target.csv')
+    logging.info('Loading target data from {}'.format(target_path))
     target_df = pd.read_csv(target_path, index_col = 0, dtype = np.float64)
     target_df = target_df.reindex(spectra_df.index)
     target_df.dropna(inplace = True)
@@ -265,30 +270,37 @@ if __name__ == '__main__':
 
 
     # Create bins for IR and mass spectra
+    logging.info('Creating bins for standardizing the spectra')
     ir_bins = np.arange(min_ir - eps, max_ir + eps, step_ir)
     mass_bins = np.arange(min_mass - eps, max_mass + eps, step_mass)
 
     # Compute structures of different molecular groups
+    logging.info('Computing the structures of functional groups')
     func_grp_structs = {func_name : Chem.MolFromSmarts(func_smarts)\
                         for func_name, func_smarts in func_grp_smarts.items()}
 
     # Create and save csv files of spectra
     for root, dirs, files in os.walk(data_dir):
         if root == os.path.join(data_dir, 'ir'):
+            logging.info('Starting to parse IR jdx files')
             ir_path = os.path.join(data_dir, 'ir.csv')
             save_spectra_to_csv(root, files, ir_path, ir_bins, False)
 
         if root == os.path.join(data_dir, 'mass'):
+            logging.info('Starting to parse mass jdx files')
             mass_path = os.path.join(data_dir, 'mass.csv')
             save_spectra_to_csv(root, files, mass_path, mass_bins, True)
             
     #Load CAS data and merge with inchi
+    logging.info('Loading CAS file from {}'.format(args.cas_list))
     cas_df = pd.read_csv(args.cas_list, sep='\t', header = 0, usecols = [1,2], names = ['formula','cas'])
     cas_df.dropna(subset=['cas'], inplace=True)
     cas_df.cas = cas_df.cas.str.replace('-', '')
     cas_df.set_index('cas', inplace = True)
 
+    
     inchi_path = os.path.join(data_dir, 'inchi.txt')
+    logging.info('Loading inchi file from {}'.format(inchi_path))
     inchi_df = pd.read_csv(inchi_path, sep='\t', header = 0, usecols = [0,1],\
                         names = ['cas','inchi'], dtype = str)
     inchi_df.dropna(inplace = True)
@@ -296,5 +308,6 @@ if __name__ == '__main__':
 
     # Create and save csv of target 
     cas_inchi_df = pd.merge(cas_df, inchi_df, left_index = True, right_index = True, how = 'inner')
+    logging.info('Creating target csv dataset in {}'.format(target_path))
     target_path = os.path.join(data_dir, 'target.csv')
     save_target_to_csv(cas_inchi_df, target_path)
