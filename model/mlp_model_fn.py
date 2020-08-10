@@ -55,6 +55,7 @@ def mlp_model_fn(is_training, inputs, params):
     target = inputs['target']
     spectra_data = inputs['spectra_data']
     params['output_shape'] = target.shape[1]
+    num_functional_groups = tf.cast(target.shape[1], tf.float64)
 
     #Compute logits and make predictions 
     with tf.variable_scope('model', reuse = not is_training):
@@ -63,7 +64,8 @@ def mlp_model_fn(is_training, inputs, params):
         
     #Binary cross entropy loss computed across every dimension for multi label classification
     loss = tf.reduce_mean(tf.losses.sigmoid_cross_entropy(target, logits))
-    accuracy = tf.reduce_mean(tf.cast(tf.equal(target, predictions), tf.float64))
+    num_correct_predictions = tf.reduce_sum(tf.cast(tf.equal(target, predictions),tf.float64), axis = 1)/num_functional_groups
+    accuracy = tf.reduce_mean(tf.cast(tf.equal(num_correct_predictions, 1.0), tf.float64))
 
 
 
@@ -79,7 +81,7 @@ def mlp_model_fn(is_training, inputs, params):
     
     with tf.variable_scope('metrics'):
         metrics = {'loss' : tf.metrics.mean(loss),
-                   'accuracy' : tf.metrics.accuracy(target, predictions)}
+                   'accuracy' : tf.metrics.mean(accuracy)}
         
     
         
