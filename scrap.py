@@ -1,5 +1,4 @@
 import os
-from bs4 import BeautifulSoup as bs
 import requests, urllib
 import argparse
 import logging
@@ -71,7 +70,7 @@ def scrap_inchi(cas_ls, params, data_dir):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_dir', default= './data',\
+parser.add_argument('--save_dir', default= './data',\
      help = "Directory path to store scrapped data")
 parser.add_argument('--cas_list', default= 'species.txt',\
     help = "File containing CAS number and formula of molecules")
@@ -88,7 +87,7 @@ args = parser.parse_args()
 assert os.path.isfile(args.cas_list),"No file named {} exists".format(args.cas_list)
 
 #Create data directory to store logs and spectra
-data_dir = args.data_dir
+data_dir = args.save_dir
 if not os.path.exists(data_dir):
 	os.makedirs(data_dir)
 
