@@ -4,7 +4,7 @@ def build_ae_model(is_training, inputs, params):
     '''Build forward model and reconstruct the spectra
 
     Args:
-        is_training: (bool) indicates training or evaluation
+        is_training: (tf.placeholder) indicates training or evaluation
         inputs: (dict) contains tensors of inputs fed to the graph
         params: (dict) hyperparameters of the model
 
@@ -18,40 +18,40 @@ def build_ae_model(is_training, inputs, params):
     num_ae_layers = params['num_fc_layers']
     ae_hidden_units = params['fc_hidden_units']
     activation = params['activation']
-    dropout_probs = params['dropout_probs']
     is_denoising = params.get('is_denoising', False)
     denoise_prob = params.get('denoise_inputs', 0.05)
-    dropout_layer = inputs 
+    hidden_layer = inputs 
 
     # Randomly flip inputs to 0 with the probability of denoise_prob
     if is_denoising:
         input_shape = tf.shape(inputs)
-        dropout_layer *= tf.where(tf.random_uniform(input_shape) > denoise_prob, tf.ones(input_shape)\
+        hidden_layer *= tf.where(tf.random_uniform(input_shape) > denoise_prob, tf.ones(input_shape)\
                             , tf.zeros(input_shape))
 
     #Construct hidden layers of the encoder
     for layer in range(num_ae_layers):
         with tf.variable_scope('enc_{}'.format(layer+1)):
-            hidden_layer = tf.layers.dense(dropout_layer, ae_hidden_units[layer])
-            batch_norm_layer = tf.layers.batch_normalization(hidden_layer, training = is_training)
-            activation_layer = eval(activation)(batch_norm_layer)
-            dropout_layer = tf.layers.dropout(activation_layer, rate = dropout_probs[layer],training = is_training)
+            hidden_layer = tf.layers.dense(hidden_layer, ae_hidden_units[layer], eval(activation))
+            # batch_norm_layer = tf.layers.batch_normalization(hidden_layer, training = is_training)
+            # activation_layer = eval(activation)(batch_norm_layer)
+            # dropout_layer = tf.layers.dropout(activation_layer, rate = dropout_probs[layer],training = is_training)
+
             
             
 
-    emb_layer = dropout_layer
+    emb_layer = hidden_layer
 
     #Construct hidden layers of the decoder
     for layer in range(num_ae_layers-2, -1, -1):
         with tf.variable_scope('dec_{}'.format(layer+1)):
-            hidden_layer = tf.layers.dense(dropout_layer, ae_hidden_units[layer])
-            batch_norm_layer = tf.layers.batch_normalization(hidden_layer, training = is_training)
-            activation_layer = eval(activation)(batch_norm_layer)
-            dropout_layer = tf.layers.dropout(activation_layer, rate = dropout_probs[layer],training = is_training)
+            hidden_layer = tf.layers.dense(hidden_layer, ae_hidden_units[layer], eval(activation))
+            # batch_norm_layer = tf.layers.batch_normalization(hidden_layer, training = is_training)
+            # activation_layer = eval(activation)(batch_norm_layer)
+            # dropout_layer = tf.layers.dropout(activation_layer, rate = dropout_probs[layer],training = is_training)
     
     #Compute reconstructed spectra (use sigmoid as activation to get [0,1] range like input)
     with tf.variable_scope('dec_{}'.format(layer+1)):
-        output = tf.layers.dense(dropout_layer, inputs.shape[-1], 'sigmoid')
+        output = tf.layers.dense(hidden_layer, inputs.shape[-1], 'sigmoid')
     
     return emb_layer, output
 
@@ -72,13 +72,14 @@ def ae_model_fn(is_training, inputs, params):
 
     
     spectra_data = inputs['spectra_data']
+    is_train_ph = tf.placeholder_with_default(is_training, shape=()) #Define a placeholder for setting mode during evaluation
 
     #Compute embeddings and reconstructed data
     with tf.variable_scope('model', reuse = not is_training):
-        embeddings, spectra_recon = build_ae_model(is_training, spectra_data, params)
+        embeddings, spectra_recon = build_ae_model(is_train_ph, spectra_data, params)
         
     #Mean squared loss between input and reconstructed spectra
-    loss = tf.reduce_mean(tf.losses.mean_squared_error(spectra_data, spectra_recon))
+    loss = tf.losses.mean_squared_error(spectra_data, spectra_recon)
 
 
 
@@ -115,6 +116,7 @@ def ae_model_fn(is_training, inputs, params):
     model_spec['metrics_update_op'] = metrics_update_op
     model_spec['summary_op'] = tf.summary.merge_all()
     model_spec['variables_init_op'] = tf.global_variables_initializer()
+    model_spec['train_ph'] = is_train_ph
     
     
     if is_training:
