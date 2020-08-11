@@ -11,7 +11,8 @@ from model.input_fn import input_fn
 from model.ae_model_fn import  ae_model_fn
 from model.mlp_model_fn import mlp_model_fn
 from model.train_fn import train_and_save
-from model.embeddings_fn import embeddings
+from model.evaluate_fn import evaluate_and_predict
+# from model.embeddings_fn import embeddings
 from prepare_load_dataset import load_dataset
 
 parser = argparse.ArgumentParser()
@@ -71,7 +72,11 @@ for cv, (train_data, test_data) in enumerate(data_generator):
 
         #Update spectra data with embeddings computed from the model
         logging.info('Compute embeddings of the spectra data')
-        train_data, test_data = embeddings(train_model, eval_model, model_dir, ae_params, 'best_weights')
+        emb_params = {'restore_path' :os.path.join(model_dir,'best_weights'), 'params' :ae_params,\
+                        'layer_name' :'embeddings', 'evaluate_model' :False}
+        
+        train_data = evaluate_and_predict(train_model, is_train_data = True, **emb_params)
+        test_data = evaluate_and_predict(eval_model, is_train_data = False, **emb_params)
 
     tf.reset_default_graph()
     logging.info('Training MLP model')
@@ -92,4 +97,5 @@ for cv, (train_data, test_data) in enumerate(data_generator):
     logging.info('Start training {} epochs'.format(params['mlp']['num_epochs']))
     model_dir = os.path.join(args.model_dir, 'cv_' + str(cv+1), 'mlp')
     train_and_save(train_model, eval_model, model_dir, mlp_params, restore_weights = args.restore_mlp_from)
+    
 
