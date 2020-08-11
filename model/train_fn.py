@@ -39,11 +39,11 @@ def train_sess(sess, model_spec, num_steps, writer, params):
             writer.add_summary(summary, global_step_val)
         else:
             _,_,loss_val=sess.run([train_op, metrics_update_op, loss])
-        progress_bar.set_postfix(loss=round(loss_val,2))
+        progress_bar.set_postfix(loss=round(loss_val,6))
             
     #Compute metrics over entire training data
     train_metrics_values = sess.run({key : val[0] for key, val in metrics.items()})
-    train_metrics_string = ' '.join(['{} : {:.4f}'.format(key, val) for key, val in train_metrics_values.items()])
+    train_metrics_string = ' '.join(['{} : {:.6f}'.format(key, val) for key, val in train_metrics_values.items()])
     logging.info("- Train metrics: "+ train_metrics_string)
 
 
@@ -97,7 +97,7 @@ def train_and_save(train_model_spec, eval_model_spec, model_dir, params, restore
             train_sess(sess, train_model_spec, num_steps, train_writer, params)
             
             num_steps = (params['eval_size'] + params['batch_size'] - 1)//params['batch_size']
-            eval_metrics = evaluate_sess(sess, eval_model_spec, num_steps, eval_writer, params)
+            eval_metrics = evaluate_sess(sess, eval_model_spec, num_steps, eval_writer)
             
             last_save_path = os.path.join(model_dir, 'last_weights', 'epoch')
             last_saver.save(sess, last_save_path, global_step = epoch+1)
