@@ -80,7 +80,7 @@ def predictions_sess(sess, model_spec, size, params, layer_name = 'pred_probs', 
     num_steps = (size + batch_size- 1)//batch_size
 
     #Compute batch wise target and predictions. Add it to data array. 
-    progress_bar = trange(num_steps, position = 0)
+    progress_bar = trange(num_steps, position = 0, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
     for step in progress_bar:
         pred_batch, target_batch = sess.run([model_spec[layer_name], model_spec['target']], feed_dict = feed_dict)
         target_arr[step*batch_size: (step+1)* batch_size] = target_batch
