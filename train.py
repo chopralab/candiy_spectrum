@@ -105,13 +105,17 @@ for cv, (train_data, test_data) in enumerate(data_generator):
     pred_params = {'restore_path' :os.path.join(model_dir,'best_weights'), 'params' :mlp_params,\
                         'layer_name' :'pred_probs', 'evaluate_model' :False}
         
+    #Compute prediction probabilites of the model to compute f1 and perfection rate
     train_data = evaluate_and_predict(train_model, is_train_data = True, **pred_params)
     test_data = evaluate_and_predict(eval_model, is_train_data = False, **pred_params)
 
     train_predictions.append(train_data)
     test_predictions.append(test_data)
 
+#Compute and save the metrics
 store_results(train_predictions, test_predictions, func_names, args.model_dir)
+
+logging.info('Successfully Completed!!!!!')
 
 
     

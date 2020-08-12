@@ -1,10 +1,21 @@
 import os
+import logging
 import numpy as np
 import pandas as pd
 from sklearn.metrics import precision_recall_curve,f1_score, accuracy_score
 
 
 def compute_thresholds(data_ls):
+    '''Compete dynamic thresholds for every functional group using val data
+
+    Args:
+        data_ls: (list) containing val predictions and target of all folds
+
+    Returns:
+        thresholds: (np.array) containing the thresholds of groups
+    '''
+    logging.info('Computing Thresholds')
+    #Combine all test data into singel array
     data_arr = np.concatenate(data_ls, axis = 1)
     data_target = data_arr[1]
     data_probs = data_arr[0]
@@ -13,6 +24,7 @@ def compute_thresholds(data_ls):
     thresholds = np.zeros((1, num_func_groups))
     eps = 1e-7 
     
+    #Find threshold resulting in maximum f1 score for each functional group
     for i in range(num_func_groups):
         pre,rec,thre=precision_recall_curve(data_target[:,i],data_probs[:, i])
         f1 = 2*pre*rec/(pre+rec+eps)
@@ -21,11 +33,25 @@ def compute_thresholds(data_ls):
     return thresholds
 
 def compute_metrics(data_ls, thresholds, func_names):
+    '''Compete metrics for every fold of train and val data
+
+    Args:
+        data_ls: (list) containing predictions and target of all folds
+        thresholds: (np.array) of every functional group
+        func_names: (list) used as part of target
+
+    Returns:
+        mol_perf_df: (pd.DataFrame) contains mean and std of perfection rate
+        mol_f1_df: (pd.DataFrame) contains mean and std of f1 score
+    '''
+
+    logging.info('Computing mol_f1 and mol_perfection metrics')
     num_folds = len(data_ls)
     num_groups = thresholds.shape[1]
     mol_f1 = np.zeros((num_folds, num_groups))
     mol_perf = np.zeros((num_folds, 1))  
                 
+    #Using thresholds find mol_f1 and mol_perfection for all folds
     for ind, data_fold in enumerate(data_ls):
         fold_target = data_fold[1]
         fold_preds = (data_fold[0]>thresholds).astype('int')
@@ -35,6 +61,7 @@ def compute_metrics(data_ls, thresholds, func_names):
     overall_perf = np.array([[np.mean(mol_perf), np.std(mol_perf)]])
     overall_f1 = np.array([np.mean(mol_f1, axis = 0), np.std(mol_f1, axis = 0)])
     
+    #Create a dataframe with the results
     mol_f1_df = pd.DataFrame(overall_f1, index=['mean', 'std'], columns = func_names).T
     mol_perf_df = pd.DataFrame(overall_perf, columns=['mean', 'std'])
     
@@ -42,6 +69,16 @@ def compute_metrics(data_ls, thresholds, func_names):
 
 
 def store_results(train_predictions, test_predictions, func_group_names, save_path):
+    '''Store results in a csv file
+
+    Args:
+        data_ls: (list) containing predictions and target of all folds
+        thresholds: (np.array) of every functional group
+        func_names: (list) used as part of target
+
+    Returns:
+        None
+    '''
     thresholds = compute_thresholds(test_predictions)
     train_perf_df,train_f1_df = compute_metrics(train_predictions, thresholds, func_group_names)
     test_perf_df,test_f1_df = compute_metrics(test_predictions, thresholds, func_group_names)
@@ -50,6 +87,7 @@ def store_results(train_predictions, test_predictions, func_group_names, save_pa
     perf_df = pd.concat([train_perf_df, test_perf_df], axis = 0)
     perf_df.index = ['Train', 'Val']
     
+    logging.info('Storing results in {}'.format(save_path))
     f1_df.to_csv(os.path.join(save_path, 'mol_f1.csv'))
     perf_df.to_csv(os.path.join(save_path, 'mol_perf.csv'))
 
