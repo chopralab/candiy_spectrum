@@ -251,7 +251,7 @@ def load_dataset(data_dir, include_mass = True, **params):
     target_df = target_df.reindex(spectra_df.index)
     target_df.dropna(inplace = True)
 
-    return spectra_df.values, target_df.values
+    return spectra_df.values, target_df.values, list(func_grp_smarts.keys())
     
     
 if __name__ == '__main__':
