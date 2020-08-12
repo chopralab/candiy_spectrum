@@ -32,7 +32,7 @@ def train_sess(sess, model_spec, num_steps, writer, params):
     sess.run(model_spec['iterator_initializer'])
     sess.run(model_spec['metric_initializer_op'])
     
-    progress_bar = trange(num_steps, position = 0)
+    progress_bar = trange(num_steps, position = 0, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
     for step in progress_bar:
         if step%params['save_frequency']==0:
             _,_,summary,loss_val,global_step_val=sess.run([train_op, metrics_update_op, summary_op, loss, global_step])

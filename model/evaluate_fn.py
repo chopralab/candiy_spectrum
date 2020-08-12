@@ -29,7 +29,7 @@ def evaluate_sess(sess, model_spec, num_steps, writer, feed_dict = {}):
     sess.run(model_spec['iterator_initializer'])
     sess.run(model_spec['metric_initializer_op'])
     
-    progress_bar = trange(num_steps, position = 0)
+    progress_bar = trange(num_steps, position = 0, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
     for _ in progress_bar:
         _ = sess.run(metrics_update_op, feed_dict = feed_dict)
     
