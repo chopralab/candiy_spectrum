@@ -41,31 +41,33 @@ def compute_metrics(data_ls, thresholds, func_names):
         func_names: (list) used as part of target
 
     Returns:
-        mol_perf_df: (pd.DataFrame) contains mean and std of perfection rate
-        mol_f1_df: (pd.DataFrame) contains mean and std of f1 score
+        mol_score_df: (pd.DataFrame) contains mean and std of mol. scores
+        func_f1_df: (pd.DataFrame) contains mean and std of func. f1 score
     '''
 
-    logging.info('Computing mol_f1 and mol_perfection metrics')
+    logging.info('Computing func_f1, mol_f1 and mol_perfection metrics')
     num_folds = len(data_ls)
     num_groups = thresholds.shape[1]
-    mol_f1 = np.zeros((num_folds, num_groups))
-    mol_perf = np.zeros((num_folds, 1))  
+    func_f1= np.zeros((num_folds, num_groups))
+    mol_score = np.zeros((num_folds, 2))  
                 
-    #Using thresholds find mol_f1 and mol_perfection for all folds
+    #Using thresholds find func_f1, mol_f1 and mol_perfection for all folds
     for ind, data_fold in enumerate(data_ls):
         fold_target = data_fold[1]
         fold_preds = (data_fold[0]>thresholds).astype('int')
-        mol_f1[ind,:] = f1_score(fold_target, fold_preds, average = None)
-        mol_perf[ind,:] = accuracy_score(fold_target, fold_preds)
+        func_f1[ind,:] = f1_score(fold_target, fold_preds, average = None)
+        mol_score[ind,1] = f1_score(fold_target, fold_preds, average = 'samples')
+        mol_score[ind,0] = accuracy_score(fold_target, fold_preds)
         
-    overall_perf = np.array([[np.mean(mol_perf), np.std(mol_perf)]])
-    overall_f1 = np.array([np.mean(mol_f1, axis = 0), np.std(mol_f1, axis = 0)])
+    overall_score = np.array([np.mean(mol_score, axis = 0), np.std(mol_score,axis = 0)])
+    overall_f1 = np.array([np.mean(func_f1, axis = 0), np.std(func_f1, axis = 0)])
     
+    print (overall_f1.shape, overall_score.shape)
     #Create a dataframe with the results
-    mol_f1_df = pd.DataFrame(overall_f1, index=['mean', 'std'], columns = func_names).T
-    mol_perf_df = pd.DataFrame(overall_perf, columns=['mean', 'std'])
+    func_f1_df = pd.DataFrame(overall_f1, columns = func_names, index=['mean', 'std']).T
+    mol_score_df = pd.DataFrame(overall_score, columns = ['mol. perfection', 'mol. f1'], index=['mean', 'std']).T
     
-    return mol_perf_df, mol_f1_df 
+    return mol_score_df, func_f1_df 
 
 
 def store_results(train_predictions, test_predictions, func_group_names, save_path):
@@ -80,15 +82,14 @@ def store_results(train_predictions, test_predictions, func_group_names, save_pa
         None
     '''
     thresholds = compute_thresholds(test_predictions)
-    train_perf_df,train_f1_df = compute_metrics(train_predictions, thresholds, func_group_names)
-    test_perf_df,test_f1_df = compute_metrics(test_predictions, thresholds, func_group_names)
+    train_score_df,train_f1_df = compute_metrics(train_predictions, thresholds, func_group_names)
+    test_score_df,test_f1_df = compute_metrics(test_predictions, thresholds, func_group_names)
     
     f1_df = pd.concat([train_f1_df, test_f1_df], keys = ['Train', 'Val'], axis = 1)
-    perf_df = pd.concat([train_perf_df, test_perf_df], axis = 0)
-    perf_df.index = ['Train', 'Val']
+    perf_df = pd.concat([train_score_df, test_score_df], keys = ['Train', 'Val'], axis = 1)
     
     logging.info('Storing results in {}'.format(save_path))
-    f1_df.to_csv(os.path.join(save_path, 'mol_f1.csv'))
-    perf_df.to_csv(os.path.join(save_path, 'mol_perf.csv'))
+    f1_df.to_csv(os.path.join(save_path, 'func_f1.csv'))
+    perf_df.to_csv(os.path.join(save_path, 'mol_score.csv'))
 
     
