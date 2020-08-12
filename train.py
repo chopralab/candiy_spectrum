@@ -1,4 +1,5 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import logging
 import argparse
 import json
@@ -12,8 +13,8 @@ from model.ae_model_fn import  ae_model_fn
 from model.mlp_model_fn import mlp_model_fn
 from model.train_fn import train_and_save
 from model.evaluate_fn import evaluate_and_predict
-# from model.embeddings_fn import embeddings
 from prepare_load_dataset import load_dataset
+from synthesize_results import store_results
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default= './experiments/ae_mlp_model',\
@@ -37,12 +38,14 @@ with open(json_path) as json_data:
 set_logger(args.model_dir, 'train.log')
 
 logging.info('Load the dataset from {}'.format(args.data_dir))
-X, y = load_dataset(args.data_dir, True, **params['preprocess'])
+X, y, func_names = load_dataset(args.data_dir, True, **params['preprocess'])
 
 
 #Train and test generator for every fold
 data_generator = train_test_generator(X, y, params['n_splits'])
 
+train_predictions = []
+test_predictions = []
 
 for cv, (train_data, test_data) in enumerate(data_generator):
     logging.info('Starting fold {}'.format(cv+1))
@@ -97,5 +100,19 @@ for cv, (train_data, test_data) in enumerate(data_generator):
     logging.info('Start training {} epochs'.format(params['mlp']['num_epochs']))
     model_dir = os.path.join(args.model_dir, 'cv_' + str(cv+1), 'mlp')
     train_and_save(train_model, eval_model, model_dir, mlp_params, restore_weights = args.restore_mlp_from)
+
+    logging.info('Compute prediction probabilities of the spectra data')
+    pred_params = {'restore_path' :os.path.join(model_dir,'best_weights'), 'params' :mlp_params,\
+                        'layer_name' :'pred_probs', 'evaluate_model' :False}
+        
+    train_data = evaluate_and_predict(train_model, is_train_data = True, **pred_params)
+    test_data = evaluate_and_predict(eval_model, is_train_data = False, **pred_params)
+
+    train_predictions.append(train_data)
+    test_predictions.append(test_data)
+
+store_results(train_predictions, test_predictions, func_names, args.model_dir)
+
+
     
 
