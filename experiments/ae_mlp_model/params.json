@@ -1,0 +1,29 @@
+{"mlp":
+    {"num_fc_layers":2, 
+    "fc_hidden_units": [200, 150], 
+    "activation": "tf.nn.relu",    
+    "dropout_probs": [0.45, 0.15],                     
+    "batch_size": 64,                       
+    "learning_rate" : 0.00015, 
+    "num_epochs": 100, 
+    "threshold" : 0.5,
+    "best_model_metric" : "loss",
+    "save_frequency": 5},
+"ae":
+    {"num_fc_layers":1, 
+    "fc_hidden_units": [256], 
+    "activation": "tf.nn.relu",   
+    "is_denoising" : 0,
+    "denoise_inputs" : 0.05,                  
+    "batch_size": 64, 
+    "learning_rate" : 0.001, 
+    "num_epochs": 100, 
+    "best_model_metric" : "loss",
+    "save_frequency": 5},
+"preprocess":
+    {"method" : "linear",
+    "order" : 1
+    },
+"n_splits" : 5,
+"train_ae" : 1
+}
