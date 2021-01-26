@@ -192,7 +192,7 @@ def preprocess_spectra_df(spectra_df, is_mass = False, **kwargs):
 
         #Fill NaN with zero and remove m/z ratio where all values are zero
         spectra_df.fillna(0, inplace = True)
-        spectra_df = spectra_df.loc[spectra_df.sum(axis=1)!=0,:]
+        spectra_df = spectra_df.loc[:,spectra_df.sum(axis=0)!=0]
         
     else:
 
@@ -227,14 +227,17 @@ def load_dataset(data_dir, include_mass = True, **params):
     ir_df = preprocess_spectra_df(ir_df, is_mass = False, **params).T
     
     spectra_df = ir_df
+
+    print (spectra_df.shape)
     
     if include_mass:
 
         #Load and prepare mass data
         mass_path = os.path.join(data_dir, 'mass.csv')
         logging.info('Loading mass data from {}'.format(mass_path))
-        mass_df = pd.read_csv(mass_path, index_col = 0)
-        mass_df = preprocess_spectra_df(mass_df, is_mass = True).T
+        mass_df = pd.read_csv(mass_path, index_col = 0).T
+        mass_df = mass_df.loc[mass_df.index.isin(ir_df.index)]
+        mass_df = preprocess_spectra_df(mass_df, is_mass = True)
         
 #         mass_df = mass_df.reindex(ir_df.index)
 #         spectra_df = pd.concat([spectra_df, mass_df], axis = 1)
@@ -248,10 +251,11 @@ def load_dataset(data_dir, include_mass = True, **params):
     target_path = os.path.join(data_dir, 'target.csv')
     logging.info('Loading target data from {}'.format(target_path))
     target_df = pd.read_csv(target_path, index_col = 0, dtype = np.float64)
-    target_df = target_df.reindex(spectra_df.index)
-    target_df.dropna(inplace = True)
 
-    return spectra_df.values, target_df.values, list(func_grp_smarts.keys())
+    fn_groups = target_df.shape[1]
+    total_df = pd.merge(spectra_df, target_df, left_index = True, right_index = True, how = 'inner')
+    
+    return total_df.values[:, :-fn_groups], total_df.values[:, -fn_groups:], list(func_grp_smarts.keys())
     
     
 if __name__ == '__main__':
