@@ -308,6 +308,6 @@ if __name__ == '__main__':
 
     # Create and save csv of target 
     cas_inchi_df = pd.merge(cas_df, inchi_df, left_index = True, right_index = True, how = 'inner')
-    logging.info('Creating target csv dataset in {}'.format(target_path))
     target_path = os.path.join(data_dir, 'target.csv')
+    logging.info('Creating target csv dataset in {}'.format(target_path))
     save_target_to_csv(cas_inchi_df, target_path)
