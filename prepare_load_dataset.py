@@ -227,8 +227,6 @@ def load_dataset(data_dir, include_mass = True, **params):
     ir_df = preprocess_spectra_df(ir_df, is_mass = False, **params).T
     
     spectra_df = ir_df
-
-    print (spectra_df.shape)
     
     if include_mass:
 
